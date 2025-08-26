@@ -54,6 +54,7 @@ div#bundle-widget-container {
   text-align: center;
   font-weight: 600;
   padding: 4px;
+  font-size: var(--bundle-body-font-size, 16px);
 }
 .sbpb-product-bundle-widget .sbpb-product-price span {
   font-size: var(--bundle-body-font-size, 16px);

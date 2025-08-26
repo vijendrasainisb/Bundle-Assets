@@ -51,38 +51,22 @@ document.addEventListener("DOMContentLoaded", async function () {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      settings = await response.json();
+      widgetSettings = await response.json();
 
-      if (settings.error) {
-        throw new Error(settings.error);
+      if (widgetSettings.error) {
+        throw new Error(widgetSettings.error);
       }
 
-      console.log("Bundle settings loaded successfully:", settings);
-      createBundleCSSVariables(settings);
+      console.log("Bundle settings loaded successfully:", widgetSettings);
+      createBundleCSSVariables(widgetSettings);
     } catch (error) {
       console.error("Failed to fetch bundle settings:", error);
     }
   }
-
+  
   // Ensure productIds is not empty before making the next request
   if (productIds.length > 0 && bundleInfo.bundle_products) {
-    // Convert the array to a comma-separated string
-    const productIdsString = productIds.join(",");
-    const { discountAmount, discountType, name } = bundleInfo;
-    // Set the `id` attribute of the button
-    const button = document.querySelector(".sbpb-bundle-button");
-    const buttonText = document.querySelector(".sbpb-bundle-button .button-text");
-    if (button) {
-      button.setAttribute("data-product-ids", productIdsString);
-      button.setAttribute("data-discount", discountAmount);
-      button.setAttribute("data-bundle-name", name);
-      button.setAttribute("data-discount-type", discountType);
-      if (productIds.length > 2) {
-        buttonText.textContent = settings?.buttonText ?? "Add all to cart";
-      } else {
-        buttonText.textContent = settings?.buttonText ?? "Add to cart";
-      }
-    }
+    
     // display bundle widget
     document.getElementById("sbpbBundle").style.display = "block";
 
@@ -108,92 +92,132 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     // Call the displayBundle function to populate the HTML
-    displayBundle(allProductData, bundleInfo);
+    displayBundle(allProductData, bundleInfo, productIds, widgetSettings);
   }
 });
 
 // Function to display the bundle on the page
-function displayBundle(shopifyData, bundleInfo) {
-  const { discountAmount, discountType } = bundleInfo;
-
-  // Select the container to populate products
-  const container = document.getElementById("bundle-widget-container");
-  container.innerHTML = ""; // Clear existing content
+function displayBundle(shopifyData, bundleInfo, productIds, settings) {
+ const { discountAmount, discountType } = bundleInfo;
 
   let totalOriginalPrice = 0;
   let totalDiscountedPrice = 0;
 
-  // Initialize currency and safely check if available in the first product
-  const currencyCode = window.Shopify.currency.active || "USD"; // Default value in case of missing data
+  const currencyCode = window.Shopify?.currency?.active || "USD";
   const currency = getCurrencySymbol(currencyCode);
 
-  // Loop through Shopify data and populate the HTML
-  shopifyData.forEach((product, index) => {
+  // Build product blocks HTML
+  let productsHTML = "";
+
+  shopifyData.forEach((product) => {
     const imageSrc = product.images?.[0] || "";
     const productTitle = product.title;
     const rawPrice = product.variants[0].price;
     const productPrice =
       typeof rawPrice === "string" ? parseFloat(rawPrice) : rawPrice / 100;
-    const variants = product.variants.map((variant) => ({
-      id: variant?.id, // Variant ID
-      title: variant.title, // Variant title
-    }));
+    const variants = product.variants.map(
+      (variant) => `<option value="${variant.id}">${variant.title}</option>`
+    );
 
-    // Calculate discounted price for this product
+    // Discounted price
     const productDiscount =
       discountType === "percent"
         ? (productPrice * discountAmount) / 100
         : discountAmount / shopifyData.length;
+
     const productDiscountedPrice = productPrice - productDiscount;
 
-    // Add product prices to totals
     totalOriginalPrice += productPrice;
     totalDiscountedPrice += productDiscountedPrice;
 
-    // Create product block
-    const productBlock = document.createElement("div");
-    productBlock.classList.add("sbpb-bundle-product-block");
-
-    productBlock.innerHTML = `
+    productsHTML += `
+      <div class="sbpb-bundle-product-block">
         <div class="sbpb-image-section">
           <img src="${imageSrc}" alt="${productTitle}" />
         </div>
         <div class="sbpb-product-title">${productTitle}</div>
         <div class="sbpb-product-price">
-        ${
-          discountType === "percent"
-            ? `<span class="sbpb-original-price">${currency} ${productPrice.toFixed(2)}</span>
-            <span class="sbpb-sale-price">${currency} ${productDiscountedPrice.toFixed(2)}</span>`
-            : `<span class="sbpb-sale-price">${currency} ${productPrice.toFixed(2)}</span>`
-        }          
+          ${
+            discountType === "percent"
+              ? `<span class="sbpb-original-price">${currency} ${productPrice.toFixed(
+                  2
+                )}</span>
+                 <span class="sbpb-sale-price">${currency} ${productDiscountedPrice.toFixed(
+                   2
+                 )}</span>`
+              : `<span class="sbpb-sale-price">${currency} ${productPrice.toFixed(
+                  2
+                )}</span>`
+          }
         </div>
         <div class="sbpd-product-variant">
           <select name="product_variant">
-            ${variants.map((variant) => `<option value="${variant.id}">${variant.title}</option>`).join("")}
+            ${variants.join("")}
           </select>
         </div>
-      `;
-
-    container.appendChild(productBlock);
-  });
-
-  let totalFixDiscountedPrice = totalOriginalPrice;
-  if (discountType === "fix") {
-    totalFixDiscountedPrice = totalOriginalPrice - discountAmount;
-  }
-
-  const totalContainer = document.getElementById("sbpb-total");
-  totalContainer.innerHTML = `
-      <div class="sbpb-product-price">
-        Total: <span class="sbpb-original-price">${currency} ${totalOriginalPrice.toFixed(2)}</span>
-        ${
-          discountType === "percent"
-            ? `
-        <span class="sbpb-sale-price">${currency} ${totalDiscountedPrice.toFixed(2)}</span>`
-            : `<span class="sbpb-sale-price">${currency} ${totalFixDiscountedPrice.toFixed(2)}</span>`
-        }
       </div>
     `;
+  });
+
+  // Totals
+  let finalTotal = totalOriginalPrice;
+  if (discountType === "fix") {
+    finalTotal = totalOriginalPrice - discountAmount;
+  }
+
+  const totalsHTML = `
+    <div class="sbpb-product-price">
+      Total: <span class="sbpb-original-price">${currency} ${totalOriginalPrice.toFixed(
+        2
+      )}</span>
+      <span class="sbpb-sale-price">
+        ${currency} ${(discountType === "percent" ? totalDiscountedPrice : finalTotal).toFixed(2)}
+      </span>
+    </div>
+  `;
+
+  // Full widget HTML in one variable
+  const widgetHTML = `
+    <h2>${bundleInfo.heading || "Buy both cakes and save 25%!"}</h2>
+    <h6>${bundleInfo.subHeading || "Better have two cakes than one"}</h6>
+    <div id="widget-block">
+      <div id="bundle-widget-container">${productsHTML}</div>
+      <div id="sbpb-total">${totalsHTML}</div>
+    </div>
+    <div class="sbpb-quantity-cart">
+      <div class="sbpb-quantity">
+        <label for="quantity">Quantity</label>
+        <input type="number" name="quantity" value="1" class="sbpb-input-quantity">
+      </div>
+      <div class="sbpb-add-to-cart">
+        <button type="submit" onClick="addBundleToCart(this)" class="sbpb-bundle-button">
+          <span class="button-text">Add both to cart</span>
+          <span class="spinner" style="display:none;"></span>
+        </button>
+      </div>
+    </div>
+  `;
+
+  // Inject everything into root div
+  document.getElementById("sbpbBundle").innerHTML = widgetHTML;
+
+  // Convert the array to a comma-separated string
+    const productIdsString = productIds.join(",");
+    const { name } = bundleInfo;
+    // Set the `id` attribute of the button
+    const button = document.querySelector(".sbpb-bundle-button");
+    const buttonText = document.querySelector(".sbpb-bundle-button .button-text");
+    if (button) {
+      button.setAttribute("data-product-ids", productIdsString);
+      button.setAttribute("data-discount", discountAmount);
+      button.setAttribute("data-bundle-name", name);
+      button.setAttribute("data-discount-type", discountType);
+      if (productIds.length > 2) {
+        buttonText.textContent = settings?.buttonText ?? "Add all to cart";
+      } else {
+        buttonText.textContent = settings?.buttonText ?? "Add to cart";
+      }
+    }
 }
 
 // ADD TO CART FEATURE
