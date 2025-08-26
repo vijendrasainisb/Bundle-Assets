@@ -184,15 +184,19 @@ input.sbpb-input-quantity {
   animation: spin 1s linear infinite;
 }
 .sbpb-product-bundle-widget .sbpb-image-section {
-   max-height: 215px;
+  max-height: 215px;
 }
 .sbpb-product-bundle-widget .sbpb-image-section img {
-    max-height: 100%;
-    max-width: 100%;
+  max-height: 100%;
+  max-width: 100%;
 }
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 @media (max-width: 768px) {
   div#sbpbBundle {

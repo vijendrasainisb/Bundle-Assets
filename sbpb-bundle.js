@@ -1,9 +1,13 @@
 document.addEventListener("DOMContentLoaded", async function () {
   let bundleInfo = {};
   let productIds = [];
-  let settings = {};
+  let widgetSettings = {};
 
+  const bkdUrl = 'http://localhost:64230';
   let backendUrl = bkdUrl || "https://startbit-product-bundler.onrender.com";
+  const widgetElement = document.getElementById("sbpbBundle");
+  const productId = widgetElement.getAttribute("data-product-id");
+  const shopDomain = widgetElement.getAttribute("data-shop-domain");
   // Logic to display bundle product
 
   if (productId && backendUrl) {
@@ -63,10 +67,9 @@ document.addEventListener("DOMContentLoaded", async function () {
       console.error("Failed to fetch bundle settings:", error);
     }
   }
-  
+
   // Ensure productIds is not empty before making the next request
   if (productIds.length > 0 && bundleInfo.bundle_products) {
-    
     // display bundle widget
     document.getElementById("sbpbBundle").style.display = "block";
 
@@ -98,7 +101,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 // Function to display the bundle on the page
 function displayBundle(shopifyData, bundleInfo, productIds, settings) {
- const { discountAmount, discountType } = bundleInfo;
+  const { discountAmount, discountType } = bundleInfo;
 
   let totalOriginalPrice = 0;
   let totalDiscountedPrice = 0;
@@ -116,7 +119,7 @@ function displayBundle(shopifyData, bundleInfo, productIds, settings) {
     const productPrice =
       typeof rawPrice === "string" ? parseFloat(rawPrice) : rawPrice / 100;
     const variants = product.variants.map(
-      (variant) => `<option value="${variant.id}">${variant.title}</option>`
+      (variant) => `<option value="${variant.id}">${variant.title}</option>`,
     );
 
     // Discounted price
@@ -140,13 +143,13 @@ function displayBundle(shopifyData, bundleInfo, productIds, settings) {
           ${
             discountType === "percent"
               ? `<span class="sbpb-original-price">${currency} ${productPrice.toFixed(
-                  2
+                  2,
                 )}</span>
                  <span class="sbpb-sale-price">${currency} ${productDiscountedPrice.toFixed(
-                   2
+                   2,
                  )}</span>`
               : `<span class="sbpb-sale-price">${currency} ${productPrice.toFixed(
-                  2
+                  2,
                 )}</span>`
           }
         </div>
@@ -168,7 +171,7 @@ function displayBundle(shopifyData, bundleInfo, productIds, settings) {
   const totalsHTML = `
     <div class="sbpb-product-price">
       Total: <span class="sbpb-original-price">${currency} ${totalOriginalPrice.toFixed(
-        2
+        2,
       )}</span>
       <span class="sbpb-sale-price">
         ${currency} ${(discountType === "percent" ? totalDiscountedPrice : finalTotal).toFixed(2)}
@@ -202,33 +205,33 @@ function displayBundle(shopifyData, bundleInfo, productIds, settings) {
   document.getElementById("sbpbBundle").innerHTML = widgetHTML;
 
   // Convert the array to a comma-separated string
-    const productIdsString = productIds.join(",");
-    const { name } = bundleInfo;
-    // Set the `id` attribute of the button
-    const button = document.querySelector(".sbpb-bundle-button");
-    const buttonText = document.querySelector(".sbpb-bundle-button .button-text");
-    if (button) {
-      button.setAttribute("data-product-ids", productIdsString);
-      button.setAttribute("data-discount", discountAmount);
-      button.setAttribute("data-bundle-name", name);
-      button.setAttribute("data-discount-type", discountType);
-      if (productIds.length > 2) {
-        buttonText.textContent = settings?.buttonText ?? "Add all to cart";
-      } else {
-        buttonText.textContent = settings?.buttonText ?? "Add to cart";
-      }
+  const productIdsString = productIds.join(",");
+  const { name } = bundleInfo;
+  // Set the `id` attribute of the button
+  const button = document.querySelector(".sbpb-bundle-button");
+  const buttonText = document.querySelector(".sbpb-bundle-button .button-text");
+  if (button) {
+    button.setAttribute("data-product-ids", productIdsString);
+    button.setAttribute("data-discount", discountAmount);
+    button.setAttribute("data-bundle-name", name);
+    button.setAttribute("data-discount-type", discountType);
+    if (productIds.length > 2) {
+      buttonText.textContent = settings?.buttonText ?? "Add all to cart";
+    } else {
+      buttonText.textContent = settings?.buttonText ?? "Add to cart";
     }
+  }
 }
 
 // ADD TO CART FEATURE
 
 async function addBundleToCart(button) {
   // Show spinner and disable button
-  const buttonText = button.querySelector('.button-text');
-  const spinner = button.querySelector('.spinner');
-  
-  buttonText.style.display = 'none';
-  spinner.style.display = 'inline-block';
+  const buttonText = button.querySelector(".button-text");
+  const spinner = button.querySelector(".spinner");
+
+  buttonText.style.display = "none";
+  spinner.style.display = "inline-block";
   buttonText.disabled = true;
 
   // Get the product IDs from the data attribute
@@ -269,9 +272,6 @@ async function addBundleToCart(button) {
     alert("Please select variants for all bundle items.");
     return;
   }
-
-  // Log selected variants for debugging
-  //console.log("Selected Variants:", selectedVariants);
 
   try {
     // Send a POST request to the Shopify cart API
@@ -387,10 +387,13 @@ function createBundleCSSVariables(settingsObj) {
 }
 
 function getCurrencySymbol(currencyCode) {
-  return (0).toLocaleString('en', {
-    style: 'currency',
-    currency: currencyCode,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).replace(/\d/g, '').trim();
+  return (0)
+    .toLocaleString("en", {
+      style: "currency",
+      currency: currencyCode,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    })
+    .replace(/\d/g, "")
+    .trim();
 }
